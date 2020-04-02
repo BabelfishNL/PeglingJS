@@ -1,0 +1,47 @@
+[
+  {
+    "_id": "5↸\t\u12347ddb7e4b1ba4abe358bf67",
+    "index": 0,
+    "guid": "54083f4d-689e-48de-a6cd-6b4947d5265b",
+    "isActive": true,
+    "balance": "$2,039.72",
+    "picture": "http://placehold.it/32x32",
+    "age": 34,
+    "eyeColor": "green",
+    "name": "Spencer Strong",
+    "gender": "male",
+    "company": "SUSTENZA",
+    "email": "spencerstrong@sustenza.com",
+    "phone": "+1 (912) 531-2918",
+    "address": "119 Monitor Street, Camas, Arizona, 6822",
+    "about": "Aute id anim occaecat et pariatur duis ea ipsum tempor aliquip exercitation et esse do. Ad consectetur incididunt ex in dolore qui. Eu officia Lorem ea veniam cupidatat enim eu dolor commodo veniam nisi eiusmod. Culpa occaecat in non incididunt eu ad dolore anim anim est cillum aute do.\r\n",
+    "registered": "2018-05-16T09:41:12 -02:00",
+    "latitude": 40.4042,
+    "longitude": 140.166575,
+    "tags": [
+      "ea",
+      "cillum",
+      "quis",
+      "laborum",
+      "aliquip",
+      "irure",
+      "officia"
+    ],
+    "friends": [
+      {
+        "id": 0,
+        "name": "Gibson Bush"
+      },
+      {
+        "id": 1,
+        "name": "Mckay Rich"
+      },
+      {
+        "id": 2,
+        "name": "Nicholson Delgado"
+      }
+    ],
+    "greeting": "Hello, Spencer Strong! You have 10 unread messages.",
+    "favoriteFruit": "apple"
+  }
+]
