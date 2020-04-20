@@ -45,7 +45,10 @@ PeglingJS is written entirely in plain JavaScript. It uses several ES6 features.
 ### 1.2 Installation & Use
 
 * Download or clone into the repository
-* Include the <script src = "pegling.min.js" type = "text/javascript"/></script>
+* Include the local copy  
+`<script src = "pegling.min.js" type = "text/javascript"/></script>`  
+or use the JSDelivr CDN:  
+`<script src="https://cdn.jsdelivr.net/gh/BabelfishNL/PeglingJS/src/pegling.min.js"></script>`
 * This creates the global object `Pegling`. See section 'Technical Manual' for further instructions
 
 ### 1.3 Features
