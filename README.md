@@ -142,7 +142,7 @@ This distribution contains the following files:
 * `README.md`:  this documentation
 * src/
 	* `pegling.js`: the javascript source for the parser generator (PEG parse rules, 50 lines; recursive descent engine, 120 lines, tracing/logging, 20 lines; total, 4KB, 230 lines);
-	* `pegling.min.js`: minified version
+	* `pegling.min.js`: minified version, made by `minify pegling.js > pegling.min.js`
 * tst/
 	* `test1.js`: first test file: self-compilation and some logging
 	* `test2.js`: JSON PEG and reader (30 lines)
@@ -281,6 +281,7 @@ Auxiliary functions which form the two halves of `Pegling.parser`:
 
 * `Pegling.pegRules` are the rules for the PEG grammar
 * `Pegling.pegParser` is a parser for PeglingJS PEG specifications
+* `Pegling.tracedParser` is a function which take a list of loglevels as described in 6.1.1 and returns a pegparser that generates those logs (for debugging grammars). Usage: `Pegling.tracedParser(pegSource,[loglevels during parser gen (e.g. nonterminals')],[loglevels for the parser])`
 
 ### 6.2. Rules
 The `rdi` rules have the following format:

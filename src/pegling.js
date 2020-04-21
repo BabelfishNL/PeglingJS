@@ -215,12 +215,22 @@ var Pegling = (function() {
 			return res;
 		}
 	}
-	let pegParser = txt => (rdp(pegRules))(txt,'grammar'),
-		parser = (src,...loggers) => rdp(pegParser(src),...loggers)
+	let pp = rdp(pegRules),
+		pegParser = txt => pp(txt,'grammar'),
+		tracingPegParser = function (logs) {
+			let tpp = rdp(pegRules,logs);
+			return txt => tpp(txt,'grammar')
+		},
+		parser = (src,loggers) => rdp(pegParser(src),loggers),
+		tracedParser = function (src,logs,loggers) {
+			let tpp = tracingPegParser(logs);
+			return rdp(tpp(src),loggers);
+		}
 	return {
 		pegRules:pegRules, // PEG grammar rules
 		rdp:rdp, // rules => parser (= txt => ast)
 		pegParser:pegParser, // X.src => X.rules
+		tracedParser:tracedParser,
 		parser:parser // X.src => ( X.txt => X.ast)
 	}
 }())
