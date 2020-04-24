@@ -23,9 +23,9 @@ let txt = `grammar <-  {{ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{})}}
 		{{ast=>['var',ast[1][0][1]]}} 	(nonterminal !'<-')
 	literal <- {{ast=>['span',ast[1][1][1].reduce((a,v)=>a+v[1][1][1],'')]}}
 										(['] (!['] .)* ['] sp)
-	charclass <- {{ast=>['cc',ast[1][1][1].reduce((a,v)=>
+	charclass <- {{ast=>['cc',ast[1][2][1].reduce((a,v)=>
 			v[1][1][1]instanceof Array?a+v[1][1][1][0][1]+'-'+v[1][1][1][2][1]:a+v[1][1][1],'')]}}
-										('[' (!']' (. '-' . / .))* ']' sp)
+										('[' ']'? (!']' (. '-' . / .))* ']' sp)
 	nonterminal <- {{ast=>['@nt',ast[1][0].reduce((a,v)=>a+v[1],'')]}}
 										([a-zA-Z]+ sp)
 	code <- {{ast=>eval(ast[1][1][1].reduce((a,v)=>a+v[1][1][1],''))}}

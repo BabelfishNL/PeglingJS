@@ -33,9 +33,11 @@ var Pegling = (function() {
 							['*',['cat',['!',['span',"'"]],['.']]],
 							['span',"'"],
 							['var','sp']]],
-		charclass: [ast=>['cc',ast[1][1][1].reduce((a,v)=>
-			v[1][1][1]instanceof Array?a+v[1][1][1][0][1]+'-'+v[1][1][1][2][1]:a+v[1][1][1],'')],
+		charclass: [ast=>['cc',ast[1][2][1].reduce((a,v)=>
+			v[1][1][1]instanceof Array?a+v[1][1][1][0][1]+'-'+v[1][1][1][2][1]:a+v[1][1][1],
+				ast[1][1].length>1?'\]':'')],
 					['cat',	['span','['],
+							['?', ['span',']']],
 							['*',['cat',['!',['span',']']],
 										['/',['cat',['.'],['span','-'],['.']],['.']]]],
 							['span',']'],
