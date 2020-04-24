@@ -115,11 +115,12 @@ Below is the grammar of PEG's written as a PEG (taken from [3]). That is, this g
 					code '(' sp pattern ')'  sp /
 					non-terminal !'<-'
 	literal 	<- ['] (!['] .)* ['] sp
-	charclass 	<- '[' (!']' (. '-' . / .))* ']' sp
+	charclass 	<- '[' ']'? (!']' (. '-' . / .))* ']' sp
 	non-terminal <- [a-zA-Z]+ sp
 	code 		<- '{{' (!'}}' .)* '}}' sp
 	sp 			<-  [ \t\n]*
 ```
+*Note: added `']'? ` in charclass to allow inclusion of `]` (as first character)`
 
 It is quite possible to use this PEG directly to define the PEG language and generate a parser. However, without intervention, that parser will generate *parse-trees* which contain superfluous (for further processing) details. For example, the parse-tree of the whitespace between the fifth and sixth lines of this specification, is (in JSON) `["#*", [["#cc"," "], ["#cc","\n"], ["#cc","\t"], ["#cc","\t"], ["#cc","\t"], ["#cc","\t"]]]` but contains no relevant detail other than that it concerns whitespace.
 
