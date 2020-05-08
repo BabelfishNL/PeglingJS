@@ -17,11 +17,11 @@
 	5.1. Example usage:
 	5.2. Creating PeglingJS Parsers
 6. Technical Manual
-		6.1.1. `Pegling.parser`
+		6.1.1. `Pegling.mkCompiler`
 		6.1.2. A Generated Parser
-		6.1.3. `Pegling.rdp`
+		6.1.3. `Pegling.prime`
 		6.1.4. `rdi` (internal)
-		6.1.5. `Pegling.pegRules`, `Pegling.pegParser`
+		6.1.5. `Pegling.pegRules`, `Pegling.mkPhase1`
 	6.2. Rules
 	6.3. Instructions
 ```
@@ -120,7 +120,7 @@ Below is the grammar of PEG's written as a PEG (taken from [3]). That is, this g
 	code 		<- '{{' (!'}}' .)* '}}' sp
 	sp 			<-  [ \t\n]*
 ```
-*Note: added `']'? ` in charclass to allow inclusion of `]` (as first character)`
+*Note: added `']'? ` in charclass to allow inclusion of `]` (as first character)`*
 
 It is quite possible to use this PEG directly to define the PEG language and generate a parser. However, without intervention, that parser will generate *parse-trees* which contain superfluous (for further processing) details. For example, the parse-tree of the whitespace between the fifth and sixth lines of this specification, is (in JSON) `["#*", [["#cc"," "], ["#cc","\n"], ["#cc","\t"], ["#cc","\t"], ["#cc","\t"], ["#cc","\t"]]]` but contains no relevant detail other than that it concerns whitespace.
 
@@ -163,19 +163,19 @@ This distribution contains the following files:
 PeglingJS exposes an object with four entries:
 
 * `pegRules`, the rules which define the PEG grammar and parsers
-* `rdp`, the auxiliary function which given rules returns a parser (not normally used)
+* `prime`, the auxiliary function which given rules returns a parser (not normally used)
 * pegParer, the auxiliary function which returns the PEG parser (not normally used)
-* `parser`, the function which, given a PEG grammar, returns a parser for that grammar.
+* `mkCompiler`, the function which, given a PEG grammar, returns a parser for that grammar.
 
 ### 5.1. Example usage:
 
 ```
 let txt = ... ,
 	myPEG = ... ,
-	myparser = Pegling.parser(myPEG),
-	ast = myparser(txt,'rootNonterminal'),
-	myloggingparser =  Pegling.parser(myPEG,['non-terminals','myfuns']),
-	more = myloggingparser(txt,'rootNonterminal')
+	myparser = Pegling.mkCompiler(myPEG),
+	ast = mymkCompiler(txt,'rootNonterminal'),
+	myloggingparser =  Pegling.mkCompiler(myPEG,['non-terminals','myfuns']),
+	more = myloggingmkCompiler(txt,'rootNonterminal')
 ```
 
 This will return a parser for the given PEG and will apply that parser to the given input. Then it will create another parser which logs certain events (to the Javascript console), namely reduction for entire rules (non-terminals) and for the functions that are included in the PEG.
@@ -237,7 +237,7 @@ File `test2.js` contains the final result of applying these steps.
 
 ## 6. Technical Manual
 
-#### 6.1.1. `Pegling.parser`
+#### 6.1.1. `Pegling.mkCompiler`
 
 * arguments:
 	* An annotated PEG
@@ -258,11 +258,11 @@ File `test2.js` contains the final result of applying these steps.
 * returns: 
 	* Whatever the code-snippets created
 
-#### 6.1.3. `Pegling.rdp`
+#### 6.1.3. `Pegling.prime`
 
 * arguments:
 	* Parse rules
-	* A list of log events (see Pegling.parser)
+	* A list of log events (see Pegling.mkCompiler)
 * returns:
 	* a parser
 
@@ -276,13 +276,13 @@ File `test2.js` contains the final result of applying these steps.
 	* `idxn`: is the character index after accepting `pat` in `inp`, or is -1 if the parse failed
 	* `ast`: is an abstract syntax tree for the parsed non-terminal (or a data structure representing where parsing failed eventually if `idxn` is -1
 	
-#### 6.1.5. `Pegling.pegRules`, `Pegling.pegParser`
+#### 6.1.5. `Pegling.pegRules`, `Pegling.mkPhase1`
 
-Auxiliary functions which form the two halves of `Pegling.parser`:
+Auxiliary functions which form the two halves of `Pegling.mkCompiler`:
 
 * `Pegling.pegRules` are the rules for the PEG grammar
-* `Pegling.pegParser` is a parser for PeglingJS PEG specifications
-* `Pegling.tracedParser` is a function which take a list of loglevels as described in 6.1.1 and returns a pegparser that generates those logs (for debugging grammars). Usage: `Pegling.tracedParser(pegSource,[loglevels during parser gen (e.g. nonterminals')],[loglevels for the parser])`
+* `Pegling.mkPhase1` is a parser for PeglingJS PEG specifications
+* `Pegling.tracedParser` is a function which take a list of loglevels as described in 6.1.1 and returns a mkPhase1 that generates those logs (for debugging grammars). Usage: `Pegling.tracedmkCompiler(pegSource,[loglevels during parser gen (e.g. nonterminals')],[loglevels for the parser])`
 
 ### 6.2. Rules
 The `rdi` rules have the following format:

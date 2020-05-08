@@ -46,7 +46,7 @@ let wh = x => [],
 function readFile(event) {
 	const file = event.target.files[0],
 		reader = new FileReader(),
-		jsonParser = Pegling.parser(jsonPeg);
+		jsonParser = Pegling.mkXpiler(jsonPeg);
 		
 	reader.onload = function(){
 		var txt = reader.result;

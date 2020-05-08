@@ -4,16 +4,16 @@ var Pegling = (function() {
 	const pegRules = {
 		grammar: [ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{}),
 				   ['+',[ast=>['cat',ast[1][0][1],ast[1][3]],
-					['cat',['var','nonterminal'],
+					['#',['cat',['var','nonterminal'],
 						['span','<-'],
 						['var','sp'],
-						['var','pattern']]]]],
+						['var','pattern']]]]]],
 		pattern:  [ast=>ast[1][1][1].length==0?ast[1][0]:ast[1][1][1].reduce((a,v)=>{a.push(v[1][2]); return a;},['/',ast[1][0]]),
 					['cat', ['var','alternative'],['*',['cat',['span','/'],['var','sp'],['var','alternative']]]]],
 		alternative: [ast=>ast.length>=2?['cat'].concat(ast):ast[0],
 						['+',
 						[ast=>ast[1][0].length>1?[ast[1][0][1],ast[1][2]]:ast[1][2],
-							['cat',['?',['cc','!&']],['var','sp'],['var','suffix']]]]],
+							['cat',['?',['cc','!&#']],['var','sp'],['var','suffix']]]]],
 		suffix: [ast=>ast[1][1][1].reduce((a,v)=>[v[1][0][1],a],ast[1][0]),
 					['cat',['var','primary'],['*',['cat',['cc','*+?'],['var','sp']]]]],
 		primary: ['/',
@@ -49,10 +49,11 @@ var Pegling = (function() {
 		sp: [ast=>[],
 			 ['*',['cc',' \t\n']]]
 	}
-	function rdp(rules, logging=[]) {
+	function prime(rules, logging=[]) {
 		let here, logs=logging.reduce((a,v)=>{a[v]=true; return a;},{})
 		function rdi(inp,idx,pat) {
 			log('at',inp.substr(idx).split('\n')[0],pat)
+			//console.log('at',inp.substr(idx).split('\n')[0],pat)
 			let inpLen = inp.length;
 			if (idx>inpLen) return [-1,'eof'];
 			switch (pat[0]) {
@@ -130,6 +131,16 @@ var Pegling = (function() {
 							: [-1,[pat[0],idx,inp.substring(idx,idxn),ast,pat[1]]]);
 					}
 					break;
+				case '#': {
+						let x = rdi(inp,idx,pat[1]),
+							[ idxn, ast ] = x;
+						if (idxn<0) return x;
+						// add ['log', tag, AST] around AST in rule to log (tag to identify)
+						// or set breakpoint below this line to inspect
+						log('log',pat[1],pat[2],inp.substring(idx,idxn),ast)
+						return x;
+					}
+					break;
 				case '!': {
 						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
 						return log('!',idxn>idx 
@@ -138,7 +149,7 @@ var Pegling = (function() {
 					}
 					break;
 				case 'cc': {
-						let re = new RegExp('['+pat[1]+']'),
+						let re = new RegExp('['+pat[1].replace(']','\\]')+']'),
 							str = inp[idx];
 						return log('cc',re.test(str) && idx <= inpLen
 							? [idx+1,['#cc',str]]
@@ -156,16 +167,6 @@ var Pegling = (function() {
 						return log('span',str===pat[1] && idx+len <= inpLen
 							? [idx+len, ['#span',str]]
 							: [-1, [pat[0],idx,str,pat[1]]]);
-					}
-					break;
-				case 'log': {
-						let x = rdi(inp,idx,pat[2]),
-							[ idxn, ast ] = x;
-						if (idxn<0) return x;
-						// add ['log', tag, AST] around AST in rule to log (tag to identify)
-						// or set breakpoint below this line to inspect
-						log('log',pat[1],pat[2],inp.substring(idx,idxn),ast)
-						return [idxn,ast];
 					}
 					break;
 				default: {
@@ -217,23 +218,20 @@ var Pegling = (function() {
 			return res;
 		}
 	}
-	let pp = rdp(pegRules),
-		pegParser = txt => pp(txt,'grammar'),
-		tracingPegParser = function (logs) {
-			let tpp = rdp(pegRules,logs);
-			return txt => tpp(txt,'grammar')
+	let pegc = prime(pegRules),			// X.peg => ( X.src => X.rules )
+		mkPhase1 = function (logs) {  		// logs => src => compile(src)
+			let pc = logs&&logs.length>0 ? prime(pegRules,logs) : pegc;
+			return src => pc(src,'grammar')
 		},
-		parser = (src,loggers) => rdp(pegParser(src),loggers),
-		tracedParser = function (src,logs,loggers) {
-			let tpp = tracingPegParser(logs);
-			return rdp(tpp(src),loggers);
+		mkXpiler = function (src,cmpLogs,trgtLogs) {
+			let ph1 = mkPhase1(cmpLogs);
+			return prime(ph1(src),trgtLogs);
 		}
 	return {
-		pegRules:pegRules, // PEG grammar rules
-		rdp:rdp, // rules => parser (= txt => ast)
-		pegParser:pegParser, // X.src => X.rules
-		tracedParser:tracedParser,
-		parser:parser // X.src => ( X.txt => X.ast)
+		pegRules:pegRules, // PEG compiler-generator rules
+		prime:prime, // rules => compiler (= txt => code)
+		mkPhase1:mkPhase1, // X.src => X.rules
+		mkXpiler:mkXpiler // X.src => ( X.txt => X.ast)
 	}
 }())
 

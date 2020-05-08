@@ -2,7 +2,7 @@
 
 let txt = `grammar <-  {{ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{})}}
 										(
-					{{ast=>['cat',ast[1][0][1],ast[1][3]]}}
+					#{{ast=>['cat',ast[1][0][1],ast[1][3]]}}
 											(nonterminal '<-' sp pattern)+
 										)  
 	pattern <-  {{ast=>ast[1][1][1].length==0?ast[1][0]:ast[1][1][1].reduce((a,v)=>{a.push(v[1][2]); return a;},['/',ast[1][0]])}}
@@ -10,7 +10,7 @@ let txt = `grammar <-  {{ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{})}}
 	alternative <-  {{ast=>ast.length>=2?['cat'].concat(ast):ast[0]}}
 										(	
 					{{ast=>ast[1][0].length>1?[ast[1][0][1],ast[1][2]]:ast[1][2]}}
-											([!&]? sp suffix)+
+											([!&#]? sp suffix)+
 										)
 	suffix <-  {{ast=>ast[1][1][1].reduce((a,v)=>[v[1][0][1],a],ast[1][0])}}
 										(primary ([*+?] sp)*)
@@ -41,19 +41,19 @@ let rules = Pegling.pegRules;
 
 {	console.log(`
 	Test 1.1: print three values
-		* Handcrafted grammar/parser in variable 'rules'
+		* Handcrafted grammar/parser 'Pegling.pegRules'
 		* The result (*) of parsing the input in variable 'txt' (should be nearly the same, see Test 2)
 		* The result of parsing the input in variable 'txt' using the parser (*)\n
 	`);
 
 	
 	console.log(rules)
-	let newPegParser = Pegling.rdp(rules),
-		newPegRules = newPegParser(txt,'grammar')
-	console.log(newPegRules)
-	let newerPegParser = Pegling.rdp(newPegRules),
-		newerPegRules = newerPegParser(txt,'grammar')
-	console.log(newerPegRules)
+	let myMkPhase1 = Pegling.prime(rules),
+		myPegRules = myMkPhase1(txt,'grammar')
+	console.log(myPegRules)
+	let myMkPhase1_2 = Pegling.prime(myPegRules),
+		myPegRules_2 = myMkPhase1_2(txt,'grammar')
+	console.log(myPegRules_2)
 }
 
 /****************************\
@@ -63,6 +63,7 @@ let rules = Pegling.pegRules;
 {	console.log(`
 	Test 1.2: parse while printing generic differences log
 	Expected differences: generated 'txt' uses 'span' in three places where handcrafted 'rules' uses 'cc' (for a single character c, 'c' and [c] parse the same).\n
+	Added to that any extensions/alterations after V1 (e.g. log #).\n
 	`);
 
 	function compare(p, r, x, y) {
@@ -70,7 +71,7 @@ let rules = Pegling.pegRules;
 			return;
 		} else if (!(x instanceof Array) || !(y instanceof Array) 
 				   || Object.keys(x).length != Object.keys(y).length) {
-			console.log('err',p,r,x,y);
+			console.log('dif',p,r,x,y);
 		} else {
 			for (var prop in x) {
 				if (y.hasOwnProperty(prop)) {  
@@ -78,7 +79,7 @@ let rules = Pegling.pegRules;
 					compare(p,r,x[prop], y[prop])
 					p.pop()
 				} else {
-					console.log('err',p,r,x,y);
+					console.log('dif',p,r,x,y);
 					return;
 				}
 			}
@@ -92,8 +93,8 @@ let rules = Pegling.pegRules;
 						['var','sp'],
 						['var','pattern']]]]]
 
-	let comparingPegParser = Pegling.rdp(rules),
-		_ = comparingPegParser(txt,'grammar')
+	let comparingMkPhase1 = Pegling.prime(rules),
+		_ = comparingMkPhase1(txt,'grammar')
 }
 
 /****************************\
@@ -105,14 +106,14 @@ let rules = Pegling.pegRules;
 	`);
 
 	rules.grammar = [ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{}),
-				   ['+',['log',2,[ast=>['cat',ast[1][0][1],ast[1][3]],
-					['log',1,['cat',['var','nonterminal'],
+				   ['+',['#',[ast=>['cat',ast[1][0][1],ast[1][3]],
+					['#',['cat',['var','nonterminal'],
 						['span','<-'],
 						['var','sp'],
 						['var','pattern']]]]]]]
 
-	let inspectingPegParser = Pegling.rdp(rules,['mylogs']),
-		_ = inspectingPegParser(txt,'grammar')
+	let inspectingMkPhase1 = Pegling.prime(rules,['mylogs']),
+		_ = inspectingMkPhase1(txt,'grammar')
 }
 
 
