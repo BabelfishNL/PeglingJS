@@ -10,7 +10,7 @@ let txt = `grammar <-  {{ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{})}}
 	alternative <-  {{ast=>ast.length>=2?['cat'].concat(ast):ast[0]}}
 										(	
 					{{ast=>ast[1][0].length>1?[ast[1][0][1],ast[1][2]]:ast[1][2]}}
-											([!&#]? sp suffix)+
+											([!&#^]? sp suffix)+
 										)
 	suffix <-  {{ast=>ast[1][1][1].reduce((a,v)=>[v[1][0][1],a],ast[1][0])}}
 										(primary ([*+?] sp)*)
@@ -41,16 +41,18 @@ let rules = Pegling.pegRules;
 
 {	console.log(`
 	Test 1.1: print three values
-		* Handcrafted grammar/parser 'Pegling.pegRules'
-		* The result (*) of parsing the input in variable 'txt' (should be nearly the same, see Test 2)
-		* The result of parsing the input in variable 'txt' using the parser (*)\n
+		1. Handcrafted grammar/parser 'Pegling.pegRules'
+		2. The result (*) of parsing the input in variable 'txt' using those rules (should be nearly the same, see Test 2)
+		3. The result of parsing the input in variable 'txt' using the parser (rules) from (2)\n
 	`);
 
 	
 	console.log(rules)
-	let myMkPhase1 = Pegling.prime(rules),
+	
+	let myMkPhase1 = Pegling.prime(rules/*,['mylogs']*/),
 		myPegRules = myMkPhase1(txt,'grammar')
 	console.log(myPegRules)
+	
 	let myMkPhase1_2 = Pegling.prime(myPegRules),
 		myPegRules_2 = myMkPhase1_2(txt,'grammar')
 	console.log(myPegRules_2)
@@ -63,7 +65,7 @@ let rules = Pegling.pegRules;
 {	console.log(`
 	Test 1.2: parse while printing generic differences log
 	Expected differences: generated 'txt' uses 'span' in three places where handcrafted 'rules' uses 'cc' (for a single character c, 'c' and [c] parse the same).\n
-	Added to that any extensions/alterations after V1 (e.g. log #).\n
+	Added to that any extensions/alterations after V1 (e.g. log #, ^).\n
 	`);
 
 	function compare(p, r, x, y) {

@@ -17,7 +17,7 @@
 	5.1. Example usage:
 	5.2. Creating PeglingJS Parsers
 6. Technical Manual
-		6.1.1. `Pegling.mkCompiler`
+		6.1.1. `Pegling.mkXpiler`
 		6.1.2. A Generated Parser
 		6.1.3. `Pegling.prime`
 		6.1.4. `rdi` (internal)
@@ -28,13 +28,13 @@
 
 ## 1. Introduction
 
-PeglingJS is a parser-generator based on Parsing Expression Grammars (PEG's [1]). PEG's offer an efficient way of defining languages and parsers. 
+PeglingJS is a parser-and-compiler generator based on Parsing Expression Grammars (PEG's [1]). PEG's offer an efficient way of defining languages and parsers. 
 
 PeglingJS is incredibly compact (7Kb source, 4Kb minified). PeglingJS is created in the context of the development of another parser generator based on [2], and as such several disadvantages of PeglingJS are accepted for the moment:
 
 * PeglingJS uses recursive descent parsers, which are notoriously inefficient and difficult to debug
 * PeglingJS parsers aren't particularly fast (400 KB, 13.000 lines of JSON parse in 13 minutes), but they are effective and efficient for small inputs.
-* PeglingJS parsers are recursive and therefore limited by the JavaScript stack. In practice this isn't a limitation.
+* PeglingJS parsers are recursive and therefore limited by the JavaScript stack. In practice this isn't a limitation. Stack overflow usually means infinite recuresion.
 * PeglingJS offers various logging/tracing capabilities, but:
 	* parser error-reporting is limited
 	* grammar debugging is difficult
@@ -53,7 +53,7 @@ or use the JSDelivr CDN:
 
 ### 1.3 Features
 
-PeglingJS creates parsers (implemented in JavaScript) for languages defined with Parsing Expression Grammars. A developer can attribute the grammar with code to create abstract syntax trees, other datastructures, or direct interpretation.
+PeglingJS creates parsers/compilers (implemented in JavaScript) for languages defined with Parsing Expression Grammars. A developer can attribute the grammar with code to create abstract syntax trees, other datastructures, or direct interpretation. Strictly speaking '*parsing*' refers to language recognition; building an abstract syntax tree or others data structure is '*compilation*', whereas direct computation based on the input would be '*interpretation*'. PeglingJS parses grammars and produces a set of rules which encode a parser for the given language. As such, PeglingJS is a compiler compiler.
 
 ### 1.4 Tests
 
@@ -76,7 +76,7 @@ Released under [MIT](https://choosealicense.com/licenses/mit/) license
 
 ## 2. PEG
 
-PeglingJS uses the original PEG operators described in [1] with one extension for code (see below). The operators are:
+PeglingJS uses the original PEG operators described in [1] with a few extensions (see extensions, below). The operators are:
 
 * (juxtaposition): concatenation
 * **/**: choice
@@ -92,8 +92,12 @@ PeglingJS uses the original PEG operators described in [1] with one extension fo
 A PEG defines a language by defining a function which accepts texts in that language and rejects other texts. In addition to this, texts are usually processed further, based on the structure as defined by the PEG. But the parse-tree is often not directly suitable to process. Instead one needs 
 
 * an abstract syntax tree (for instance to be processed by a compiler or other component)
-* some other data structure
+* some other data structure: further compilation
 * direct interpretation
+
+#### Extensions
+
+##### Embedded code (embedded AST or code generator)
 
 PeglingJS accepts Javascript code in PEG rules, which describe the tranformation from the parse-tree to something else. In particular, PeglingJS PEG rules may look like 
 ```txt
@@ -101,12 +105,20 @@ PeglingJS accepts Javascript code in PEG rules, which describe the tranformation
 ```
 where the code defines a function which will be applied to the parse-tree resulting from parsing the PEG.
 
+##### Logging
+
+Any PEG alternative can be preceded by '*#*'. In combination with the '*mylogs*' directive this results in a log being printed precisely for the recognition of the elements in that specific rule/part. Use '*#*' in similar place as '*!*' and '*&*'; and `#( PEG )` is always an appropriate sub-expression.
+
+##### Empty axpression prevention
+
+Any PEG alternative can be preceded by '*^*'. The expression '*^PEG*' succeeds only if parsing PEG succeeds **and** if at least one character was parsed to do so. Use this to prevent infinite recursion. Use '*^*' in similar place as '*!*' and '*&*'; and `^( PEG )` is always an appropriate sub-expression.
+
 ### 2.1. Example
 Below is the grammar of PEG's written as a PEG (taken from [3]). That is, this grammar defines the language it is written in.
 ```text
 	grammar 	<-  non-terminal '<-' sp pattern+ 
 	pattern 	<-  alternative ('/' sp alternative)*
-	alternative <-  ([!&]? sp suffix)+
+	alternative <-  ([!&#^]? sp suffix)+
 	suffix 		<-  primary ([*+?] sp)*
 	primary 	<- 	'(' sp pattern sp ')'  sp / 
 					'.' sp /
@@ -120,11 +132,14 @@ Below is the grammar of PEG's written as a PEG (taken from [3]). That is, this g
 	code 		<- '{{' (!'}}' .)* '}}' sp
 	sp 			<-  [ \t\n]*
 ```
-*Note: added `']'? ` in charclass to allow inclusion of `]` (as first character)`*
+*Notes:*
+
+* *added `']'?` in charclass to allow inclusion of `]` (as first character)*
+* *added `#` and `^` in 'alternative' for logging and infinite recurion prevention*
 
 It is quite possible to use this PEG directly to define the PEG language and generate a parser. However, without intervention, that parser will generate *parse-trees* which contain superfluous (for further processing) details. For example, the parse-tree of the whitespace between the fifth and sixth lines of this specification, is (in JSON) `["#*", [["#cc"," "], ["#cc","\n"], ["#cc","\t"], ["#cc","\t"], ["#cc","\t"], ["#cc","\t"]]]` but contains no relevant detail other than that it concerns whitespace.
 
-In order to create abstract syntax trees or other data structures from the parse-trees code snippets are inserted in the PEG rules. For example, the rule for *sp* looks like:
+In order to create abstract syntax trees or other data structures from parse-trees, code snippets can be inserted in the PEG rules. For example, the rule for *sp* looks like:
 ```text
 	sp <-  {{ast=>[]}}  ([ \t\n]*)
 ```
@@ -133,7 +148,7 @@ In order to create abstract syntax trees or other data structures from the parse
 
 In this manner, PEG rules with appropriate functions, in PeglingJS, transform parse-trees on the fly to other data or actions. 
 
-File `test1.js` in this distribution contains the specification of PEG's which, when parsed by PeglingJS, will result in the same rules that PeglingJS uses to parse PEG's. By inference, applied to any PEG, those rules produce a parser for that language.
+File `test1.js` in this distribution contains the specification of PEG's which, when parsed by PeglingJS, will result in the same rules that PeglingJS uses to parse PEG's. By inference, applied to any PEG, those rules produce a parser/compiler for that language.
 
 
 ## 3. Files
@@ -164,18 +179,18 @@ PeglingJS exposes an object with four entries:
 
 * `pegRules`, the rules which define the PEG grammar and parsers
 * `prime`, the auxiliary function which given rules returns a parser (not normally used)
-* pegParer, the auxiliary function which returns the PEG parser (not normally used)
-* `mkCompiler`, the function which, given a PEG grammar, returns a parser for that grammar.
+* `mkPhase1`, the auxiliary function which returns the PEG parser (not normally used)
+* `mkXpiler`, the function which, given a annotated PEG grammar, returns a parser/compiler for that grammar.
 
 ### 5.1. Example usage:
 
 ```
 let txt = ... ,
 	myPEG = ... ,
-	myparser = Pegling.mkCompiler(myPEG),
-	ast = mymkCompiler(txt,'rootNonterminal'),
-	myloggingparser =  Pegling.mkCompiler(myPEG,['non-terminals','myfuns']),
-	more = myloggingmkCompiler(txt,'rootNonterminal')
+	myparser = Pegling.mkXpiler(myPEG),
+	ast = myparser(txt,'rootNonterminal'),
+	myloggingparser =  Pegling.mkXpiler(myPEG,['non-terminals','myfuns']),
+	more = myloggingparser(txt,'rootNonterminal')
 ```
 
 This will return a parser for the given PEG and will apply that parser to the given input. Then it will create another parser which logs certain events (to the Javascript console), namely reduction for entire rules (non-terminals) and for the functions that are included in the PEG.
@@ -184,7 +199,7 @@ This will return a parser for the given PEG and will apply that parser to the gi
 
 Creating PEG grammars is outside the scope of this document. 
 
-In this section we describe how to create a JSON parser which, given a JSON text, will produce the Javascript object described in that text. The file `test2.js` contains the result of this process. The JSON PEG without code is
+In this section we describe how to create a JSON parser which, given a JSON text, will produce the Javascript object described in that text (that is, this implementation is a parser/interpreter). This is contained in the file `test2.js`. The JSON PEG without code is
 
 ```text
 	element <- wh value wh
@@ -223,9 +238,12 @@ Every PEG expression will lead to a structure (parse-tree) which can be transfor
 ```
 and the function `number` must determine the variants:
 ```
-	number = x => Number(x[1][0]+
-			(typeof x[1][1]==='string'?'.'+x[1][1]:'')+
-			(typeof x[1][2]==='string'?x[1][2]:''))
+	number = x => function(x) {
+		let hd = x[1][0],   // the int part
+			tl = (typeof x[1][1]==='string'?'.'+x[1][1]:'')+   // the decimal part
+				 (typeof x[1][2]==='string'?x[1][2]:'');   // the scietific exponent
+		return tl!=='' ? ['flt',Number(hd+tl)]:['int',Number(hd)];
+	}
 ``` 
 * Repeat this process for every non-terminal. 
 * Often, the expression leads to lists of values of indeterminate length. If `lst` is such a list, the following pattern can be used to process those values: `lst.reduce((a,v)=>exp1,exp2)` where `exp2` is an initial accumulator (e.g. `0` or `''` or `[]`) and `exp1` computes the desired element value from parse-tree element v.
@@ -237,16 +255,20 @@ File `test2.js` contains the final result of applying these steps.
 
 ## 6. Technical Manual
 
-#### 6.1.1. `Pegling.mkCompiler`
+* Log events: these log events can be used:
+	* `attempt`: every engine attempt
+	* `nonterminals`: attempt and reduction of every entire rule
+	* `engine`: every engine reduction
+	* `mylogs`: every ` of the pseudo-instruction 'log'
+	* `myfuns`: every reduction of a code snippet
+
+
+#### 6.1.1. `Pegling.mkXpiler`
 
 * arguments:
 	* An annotated PEG
-	* A list of log events. Possible log events are:
-		* `attempt`: every engine attempt
-		* `nonterminals`: attempt and reduction of every entire rule
-		* `engine`: every engine reduction
-		* `mylog`: every ` of the pseudo-instruction 'log'
-		* `myfuns`: every reduction of a code snippet
+	* A list of log events to be applied during parser generation. This is relevant to debug grammars.
+	* A list of log events to be applied during parser application. This is relevant to debug compilers.
 * returns:
 	* a parser
 
@@ -262,7 +284,7 @@ File `test2.js` contains the final result of applying these steps.
 
 * arguments:
 	* Parse rules
-	* A list of log events (see Pegling.mkCompiler)
+	* A list of log events
 * returns:
 	* a parser
 
@@ -278,25 +300,24 @@ File `test2.js` contains the final result of applying these steps.
 	
 #### 6.1.5. `Pegling.pegRules`, `Pegling.mkPhase1`
 
-Auxiliary functions which form the two halves of `Pegling.mkCompiler`:
+Auxiliary functions which form the two halves of `Pegling.mkXpiler`:
 
 * `Pegling.pegRules` are the rules for the PEG grammar
-* `Pegling.mkPhase1` is a parser for PeglingJS PEG specifications
-* `Pegling.tracedParser` is a function which take a list of loglevels as described in 6.1.1 and returns a mkPhase1 that generates those logs (for debugging grammars). Usage: `Pegling.tracedmkCompiler(pegSource,[loglevels during parser gen (e.g. nonterminals')],[loglevels for the parser])`
+* `Pegling.mkPhase1` accepts a list of log events and returns a parser for PeglingJS PEG specifications
 
 ### 6.2. Rules
 The `rdi` rules have the following format:
 
 * The top-level is a hash with one field for every non-terminal (i.e. the set of non-terminals / rules), e.g.
-`{ grammar: ... PAG for non-terminal 'grammar' ...,`  
-`  pattern:  ... PAG for non-terminal 'pattern' ...,`  
+`{ grammar: ... PEG for non-terminal 'grammar' ...,`  
+`  pattern:  ... PEG for non-terminal 'pattern' ...,`  
 `  ... }`
 * Other values are
 	* Lists containing other values. Common format: [ *keyword*, *arguments...* ]
 	* Strings, representing keywords and string data
 	* JavaScript code
 
-Keywords coincide with the common PEG [1] operators plus `log` and code snippets
+Keywords coincide with the common PEG [1] operators plus extensions (as mentioned)
 
 ### 6.3. Instructions
 PEG's resolve a text into its structure, accepting it, or rejecting it if the text is not an instance of the PEG. In order to further process the text, that structure must be represented. It is straightforward to generate a *parse-tree*, which follows the breakdown in PEG subexpressions, but more appropriate is an *abstract syntax tree*. PeglingJS offers the ability to attribute PEG's with functions that transform the parse-tree (on the fly) to an abstract syntax tree.
@@ -316,6 +337,10 @@ parse zero or more instances of the PEG folowing `*`
 if an instance of the PEG after `?` exists, accept it
 * `['&', ...]`  
 if no instance of the PEG after `&` exists, fail
+* `['^', ...]`  
+if an instance of the PEG after `?` exists which uses at least one character from the source, accept it
+* `['#', ...]`  
+copy whatever the instace after '#' returned; log the transition if the 'myfuns' directive is active
 * `['!', ...]`  
 if no instance of the PEG after `!` exists, fail
 * `['cc', ...]`  

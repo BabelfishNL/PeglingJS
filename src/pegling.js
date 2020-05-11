@@ -13,7 +13,7 @@ var Pegling = (function() {
 		alternative: [ast=>ast.length>=2?['cat'].concat(ast):ast[0],
 						['+',
 						[ast=>ast[1][0].length>1?[ast[1][0][1],ast[1][2]]:ast[1][2],
-							['cat',['?',['cc','!&#']],['var','sp'],['var','suffix']]]]],
+							['cat',['?',['cc','!&#^']],['var','sp'],['var','suffix']]]]],
 		suffix: [ast=>ast[1][1][1].reduce((a,v)=>[v[1][0][1],a],ast[1][0]),
 					['cat',['var','primary'],['*',['cat',['cc','*+?'],['var','sp']]]]],
 		primary: ['/',
@@ -124,6 +124,13 @@ var Pegling = (function() {
 							: [idx,['#?']]);
 					}
 					break;
+				case '^': {
+						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
+						return log('^',idxn>idx 
+							? [idxn, ast] 
+							: [-1,[pat[0],idx,inp.substring(idx,idxn),ast,pat[1]]]);
+					}
+					break;
 				case '&': {
 						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
 						return log('&',idxn>idx 
@@ -182,34 +189,34 @@ var Pegling = (function() {
 		}	}	}	}
 		
 		function log(tag,v,...a) {
-		switch (tag) {
-			case 'at': if (logs.attempt) {
-				console.log(v,...a);
-			} return null;
-			case '*nt': if (logs.nonterminals) {
-				let nt=a[0][1];
-				console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here);
-			} return null;
-			case 'nt*': if (logs.nonterminals) {
-				let nt=a[0][1];
-				console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here);
-			} break;
-			case 'cat': case '/': case '+': case '*': case '?': case '&': 
-			case '!': case 'cc': case '.': case 'span': 
-			if (logs.engine) {
-				console.log(tag,' -> ',v);
-			} break;
-			case 'log':  if (logs.mylogs) {
-				let [pat,str,ast] = a;
-				console.log(tag+' '+v+' str: %c'+str,'background: #ddd;');
-				console.log('ast:',ast);
-			} break;
-			case 'fun':  if (logs.myfuns) {
-				let [f,h] = a;
-				console.log(tag,f,' ~~> ',v[1],'in',h);
-			} break;
-		}
-		return v;
+			switch (tag) {
+				case 'at': if (logs.attempt) {
+					console.log(v,...a);
+				} return null;
+				case '*nt': if (logs.nonterminals) {
+					let nt=a[0][1];
+					console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here);
+				} return null;
+				case 'nt*': if (logs.nonterminals) {
+					let nt=a[0][1];
+					console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here);
+				} break;
+				case 'cat': case '/': case '+': case '*': case '?': case '&': 
+				case '!': case 'cc': case '.': case 'span': 
+				if (logs.engine) {
+					console.log(tag,' -> ',v);
+				} break;
+				case 'log':  if (logs.mylogs) {
+					let [pat,str,ast] = a;
+					console.log(tag+' '+v+' str: %c'+str,'background: #ddd;');
+					console.log('ast:',ast);
+				} break;
+				case 'fun':  if (logs.myfuns) {
+					let [f,h] = a;
+					console.log(tag,f,' ~~> ',v[1],'in',h);
+				} break;
+			}
+			return v;
 		}
 
 		return function(inp,rootid) {
