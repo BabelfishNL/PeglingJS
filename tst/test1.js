@@ -17,8 +17,8 @@ let txt = `grammar <-  {{ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{})}}
 	primary <- 
 		{{ast=>ast[1][2]}}				('(' sp pattern sp ')'  sp) /
 		{{(ast)=>['.']}}				('.' sp) /
-		literal /
-		charclass /
+										literal /
+										charclass /
 		{{ast=>[ast[1][0],ast[1][3]]}}	(code '(' sp pattern ')'  sp) /
 		{{ast=>['var',ast[1][0][1]]}} 	(nonterminal !'<-')
 	literal <- {{ast=>['span',ast[1][1][1].reduce((a,v)=>a+v[1][1][1],'')]}}
@@ -48,6 +48,8 @@ let rules = Pegling.pegRules;
 
 	
 	console.log(rules)
+	
+	//don't need codegen here 'cos all Pegling functions are inlined
 	
 	let myMkPhase1 = Pegling.prime(rules/*,['mylogs']*/),
 		myPegRules = myMkPhase1(txt,'grammar')

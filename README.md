@@ -256,7 +256,7 @@ File `test2.js` contains the final result of applying these steps.
 ## 6. Technical Manual
 
 * Log events: these log events can be used:
-	* `attempt`: every engine attempt
+	* `attempts`: every engine attempt
 	* `nonterminals`: attempt and reduction of every entire rule
 	* `engine`: every engine reduction
 	* `mylogs`: every ` of the pseudo-instruction 'log'

@@ -1,6 +1,7 @@
 "use strict";
 
-var Pegling = (function() {
+const Pegling = (function() {
+	var cg={};
 	const pegRules = {
 		grammar: [ast=>ast.reduce((a,v)=>{a[v[1]]=v[2]; return a;},{}),
 				   ['+',[ast=>['cat',ast[1][0][1],ast[1][3]],
@@ -25,7 +26,8 @@ var Pegling = (function() {
 					  ['var','literal'],
 					  ['var','charclass'],
 					  [ast=>[ast[1][0],ast[1][3]],
-							['cat',['var','code'],['span','('],['var','sp'],['var','pattern'],['span',')'],['var','sp']]],
+							['cat', ['var','code'],['span','('],['var','sp'],['var','pattern'],
+									['span',')'],['var','sp']]],
 					  [ast=>['var',ast[1][0][1]],
 							['cat',['var','nonterminal'],['!',['span','<-']]]]],
 		literal: [ast=>['span',ast[1][1][1].reduce((a,v)=>a+v[1][1][1],'')],
@@ -44,7 +46,8 @@ var Pegling = (function() {
 							['var','sp']]],
 		nonterminal: [ast=>['@nt',ast[1][0].reduce((a,v)=>a+v[1],'')],
 				  ['cat',['+',['cc','a-zA-Z']],['var','sp']]],
-		code: [ast=>eval(ast[1][1][1].reduce((a,v)=>a+v[1][1][1],'')),
+		code: [ast=>{const f=ast[1][1][1].reduce((a,v)=>a+v[1][1][1],'');
+					 return cg.hasOwnProperty(f)?cg[f]:eval(f)},
 				['cat',['span','{{'],['*',['cat',['!',['span','}}']],['.']]],['span','}}'],['var','sp']]],
 		sp: [ast=>[],
 			 ['*',['cc',' \t\n']]]
@@ -52,23 +55,24 @@ var Pegling = (function() {
 	function prime(rules, logging=[]) {
 		let here, logs=logging.reduce((a,v)=>{a[v]=true; return a;},{})
 		function rdi(inp,idx,pat) {
-			log('at',inp.substr(idx).split('\n')[0],pat)
-			//console.log('at',inp.substr(idx).split('\n')[0],pat)
+			log('at',inp,idx,inp.substr(idx).split('\n')[0],pat)
+			//console.log('at',inp,idx,inp.substr(idx).split('\n')[0],pat)
 			let inpLen = inp.length;
 			if (idx>inpLen) return [-1,'eof'];
 			switch (pat[0]) {
 				case 'var': {
-						log('*nt',inp.substr(idx).split('\n')[0],pat);
+						log('*nt',inp,idx,inp.substr(idx).split('\n')[0],pat);
 						here.push(pat[1]);
 						let v = rdi(inp,idx,rules[pat[1]]);
 						here.pop();
-						return log('nt*',v,pat);
+						return log('nt*',inp,idx,v,pat);
 					}
 					break;
 				case 'cat': {
 						let res=[];
 						for (let i=1; i<pat.length; i++) {
-							let [ idxn, ast ] = rdi(inp,idx,pat[i]);
+							let x = rdi(inp,idx,pat[i]),
+								[ idxn, ast ] = x;
 							if (idxn>=idx) {
 								idx = idxn; 
 								res.push(ast);
@@ -76,7 +80,7 @@ var Pegling = (function() {
 								return [-1,[pat[0],i,idx,res,ast]]
 							}
 						}
-						return log('.cat',[idx,['#cat',res]]);
+						return log('.cat',inp,idx,[idx,['#cat',res]]);
 					}
 					break;
 				case '/': {
@@ -85,7 +89,7 @@ var Pegling = (function() {
 								[ idxn, ast ]=x;
 							if (idxn>=idx) {
 								let v = [idxn,ast]
-								return log('./',v);
+								return log('./',inp,idx,v);
 							}
 						}
 						return [-1,[pat[0],['#/',idx]]];
@@ -100,7 +104,7 @@ var Pegling = (function() {
 								let x = rdi(inp,idx,pat[1]);
 								[ idxn, ast ]=x;
 							} while (idxn>idx);
-							return log('+',[idx,res]);
+							return log('+',inp,idx,[idx,res]);
 						} else {
 							return [-1,[pat[0],idx,['#+',ast]]];
 						}
@@ -114,26 +118,26 @@ var Pegling = (function() {
 							let x = rdi(inp,idx,pat[1]);
 							[ idxn, ast ] = x;
 						}
-						return log('*',[idx,['#*',res]]);
+						return log('*',inp,idx,[idx,['#*',res]]);
 					}
 					break;
 				case '?': {
 						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
-						return log('?',idxn>idx 
+						return log('?',inp,idx,idxn>idx 
 							? [idxn, ast] 
 							: [idx,['#?']]);
 					}
 					break;
 				case '^': {
 						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
-						return log('^',idxn>idx 
+						return log('^',inp,idx,idxn>idx 
 							? [idxn, ast] 
 							: [-1,[pat[0],idx,inp.substring(idx,idxn),ast,pat[1]]]);
 					}
 					break;
 				case '&': {
 						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
-						return log('&',idxn>idx 
+						return log('&',inp,idx,idxn>idx 
 							? [idx,['#&']] 
 							: [-1,[pat[0],idx,inp.substring(idx,idxn),ast,pat[1]]]);
 					}
@@ -144,13 +148,13 @@ var Pegling = (function() {
 						if (idxn<0) return x;
 						// add ['log', tag, AST] around AST in rule to log (tag to identify)
 						// or set breakpoint below this line to inspect
-						log('log',pat[1],pat[2],inp.substring(idx,idxn),ast)
+						log('log',inp,idx,pat[1],pat[2],inp.substring(idx,idxn),ast)
 						return x;
 					}
 					break;
 				case '!': {
 						let [ idxn, ast ]=rdi(inp,idx,pat[1]);
-						return log('!',idxn>idx 
+						return log('!',inp,idx,idxn>idx 
 							? [-1,[pat[0],idx,inp.substring(idx,idxn),ast,pat[1]]] 
 							: [idx,['#!']]);
 					}
@@ -158,20 +162,20 @@ var Pegling = (function() {
 				case 'cc': {
 						let re = new RegExp('['+pat[1].replace(']','\\]')+']'),
 							str = inp[idx];
-						return log('cc',re.test(str) && idx <= inpLen
+						return log('cc',inp,idx,re.test(str) && idx <= inpLen
 							? [idx+1,['#cc',str]]
 							: [-1,[pat[0],idx,str,pat[1]]]);
 					}
 					break;
 				case '.':
-					return  log('.',idx <= inpLen
+					return  log('.',inp,idx,idx <= inpLen
 						? [idx+1,['#.',inp[idx]]]
 						: [-1,[pat[0],idx,inp[idx]]]);
 					break;
 				case 'span': {
 						let len = pat[1].length,
 							str = inp.substr(idx,len);
-						return log('span',str===pat[1] && idx+len <= inpLen
+						return log('span',inp,idx,str===pat[1] && idx+len <= inpLen
 							? [idx+len, ['#span',str]]
 							: [-1, [pat[0],idx,str,pat[1]]]);
 					}
@@ -183,23 +187,25 @@ var Pegling = (function() {
 						let x = rdi(inp,idx,pat[1]),
 							[ idxn, ast ] = x;
 						if (idxn<0) return x;
-						return log('fun',[idxn,f(ast)],f,here);
+						return log('fun',inp,idx,[idxn,f(ast)],f,here);
 					case 'string':
 						console.error('unknown code "'+f+'"');
 		}	}	}	}
 		
-		function log(tag,v,...a) {
+		function log(tag,inp,idx,v,...a) {
 			switch (tag) {
-				case 'at': if (logs.attempt) {
+				case 'at': if (logs.attempts) {
 					console.log(v,...a);
 				} return null;
 				case '*nt': if (logs.nonterminals) {
 					let nt=a[0][1];
-					console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here);
+					console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here,'[',inp.substr(idx).split('\n')[0],']');
 				} return null;
 				case 'nt*': if (logs.nonterminals) {
 					let nt=a[0][1];
-					console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here);
+					if (v[0]!==-1) {
+						console.log(String(here.length).padStart(3, '0')+"%"+"  ".repeat(here.length), tag,nt,v,here,'[',inp.substr(idx).split('\n')[0],']');
+					}
 				} break;
 				case 'cat': case '/': case '+': case '*': case '?': case '&': 
 				case '!': case 'cc': case '.': case 'span': 
@@ -226,12 +232,13 @@ var Pegling = (function() {
 		}
 	}
 	let pegc = prime(pegRules),			// X.peg => ( X.src => X.rules )
-		mkPhase1 = function (logs) {  		// logs => src => compile(src)
+		mkPhase1 = function (logs,codegen) {  		// logs => src => compile(src)
 			let pc = logs&&logs.length>0 ? prime(pegRules,logs) : pegc;
-			return src => pc(src,'grammar')
+			return src => 
+				{ cg=codegen; const res = pc(src,'grammar'); cg = {}; return res; }
 		},
-		mkXpiler = function (src,cmpLogs,trgtLogs) {
-			let ph1 = mkPhase1(cmpLogs);
+		mkXpiler = function (src,codegen,cmpLogs,trgtLogs) {
+			let ph1 = mkPhase1(cmpLogs,codegen);
 			return prime(ph1(src),trgtLogs);
 		}
 	return {
