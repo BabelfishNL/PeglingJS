@@ -26,6 +26,10 @@
 	6.3. Instructions
 ```
 
+## 1. Note
+
+PeglingJS is no longer being developed. Imho PEG's require too much effort to get right given small changed in the langues. Currently I use an ad-hoc parser.
+
 ## 1. Introduction
 
 PeglingJS is a parser-and-compiler generator based on Parsing Expression Grammars (PEG's [1]). PEG's offer an efficient way of defining languages and parsers. 
