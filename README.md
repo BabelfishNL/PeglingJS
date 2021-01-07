@@ -28,7 +28,7 @@
 
 ## 1. Note
 
-PeglingJS is no longer being developed. Imho PEG's require too much effort to get right given small changed in the langues. Currently I use an ad-hoc parser.
+PeglingJS is no longer under development. Imho PEG's require too much effort to get right given small changed in the langues. Currently I use an ad-hoc parser.
 
 ## 1. Introduction
 
